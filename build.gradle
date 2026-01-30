@@ -1,0 +1,28 @@
+plugins {
+    id 'java'
+}
+
+group 'it.gael'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    // Placeholder for local Hytale repo or system dependency
+    flatDir {
+        dirs 'libs'
+    }
+}
+
+dependencies {
+    // WebSocket Library for communication with Python Brain
+    implementation 'org.java-websocket:Java-WebSocket:1.5.3'
+    implementation 'com.google.code.gson:gson:2.10.1'
+
+    // The Hytale Server API (Assumed to be in libs/server.jar or provided at runtime)
+    // compileOnly name: 'hytale-server' 
+    // For now, we mock the API references or assume they are available in the classpath
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
