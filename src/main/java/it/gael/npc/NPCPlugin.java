@@ -3,22 +3,28 @@ package it.gael.npc;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import it.gael.npc.network.BotServer;
-import net.hytalegame.api.HytalePlugin; // Mock API Package
+import net.hytalegame.api.HytalePlugin; // Mock API
 import net.hytalegame.api.event.Subscribe;
 import net.hytalegame.api.event.player.PlayerChatEvent;
-import net.hytalegame.api.event.server.ServerTickEvent;
-import net.hytalegame.api.world.World;
+import net.hytalegame.api.event.player.PlayerJoinEvent;
+import net.hytalegame.api.command.CommandSender;
+import net.hytalegame.api.command.Command;
 import net.hytalegame.api.entity.Player;
-import net.hytalegame.api.entity.Entity;
+import net.hytalegame.api.entity.Npc;
+import net.hytalegame.api.world.Location;
 
 import java.net.InetSocketAddress;
-import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 public class NPCPlugin extends HytalePlugin {
 
     private BotServer server;
     private final Gson gson = new Gson();
     private static NPCPlugin instance;
+    
+    // Store active NPCs: Name -> NpcObject
+    private final Map<String, Npc> activeNPCs = new HashMap<>();
 
     @Override
     public void onEnable() {
@@ -28,6 +34,9 @@ public class NPCPlugin extends HytalePlugin {
         // Start WebSocket Server
         server = new BotServer(new InetSocketAddress(8080));
         server.start();
+        
+        // Register Command (Mock logic - usually via plugin.yml or command manager)
+        registerCommand("spawnnpc", this::onSpawnCommand);
         
         getLogger().info("Waiting for Brain connection...");
     }
@@ -42,42 +51,84 @@ public class NPCPlugin extends HytalePlugin {
     }
 
     // ==========================================
-    // Event Listeners (Hooking into Game)
+    // Commands
+    // ==========================================
+    
+    public boolean onSpawnCommand(CommandSender sender, Command cmd, String label, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage("Only players can spawn NPCs.");
+            return true;
+        }
+
+        if (args.length < 1) {
+            sender.sendMessage("Usage: /spawnnpc <name>");
+            return true;
+        }
+
+        Player player = (Player) sender;
+        String npcName = args[0];
+        
+        spawnNPC(player.getLocation(), npcName);
+        player.sendMessage("Spawned NPC: " + npcName);
+        return true;
+    }
+
+    public void spawnNPC(Location location, String name) {
+        // Logic to actually spawn the entity in the world
+        // This heavily depends on the specific Server API you are using
+        
+        // Example logic:
+        Npc npc = location.getWorld().spawn(location, Npc.class);
+        npc.setName(name);
+        npc.setSkin("default_female"); // Example skin
+        
+        activeNPCs.put(name, npc);
+        getLogger().info("Created NPC instance for " + name);
+    }
+
+    // ==========================================
+    // Event Listeners
     // ==========================================
 
     @Subscribe
     public void onPlayerChat(PlayerChatEvent event) {
-        // Send chat to Python Brain
         Player player = event.getPlayer();
         String message = event.getMessage();
         
+        // Don't process chat if no NPCs are around (optional optimization)
+        if (activeNPCs.isEmpty()) return;
+
         JsonObject json = new JsonObject();
         json.addProperty("type", "chat");
         json.addProperty("sender", player.getName());
         json.addProperty("message", message);
         
-        // Gather Context (Position, Health, Nearby Mobs)
         JsonObject context = new JsonObject();
         context.addProperty("health", player.getHealth());
-        context.addProperty("pos", player.getPosition().toString()); // Assuming Vector3.toString() exists
+        context.addProperty("pos", player.getLocation().toString());
         context.addProperty("time", player.getWorld().getTime());
         
-        // Scan nearby entities (Simulated API call)
-        // context.add("nearby", getNearbyEntitiesJson(player));
-
         json.add("context", context);
-        
-        // Broadcast to all connected Brains (usually just one)
         server.broadcast(gson.toJson(json));
     }
 
-    // Helper to execute commands received from Python
+    // ==========================================
+    // Action Execution
+    // ==========================================
+
     public void executeNPCAction(String npcName, String command, String targetName, String speech) {
-        // This runs on the main server thread
-        
-        // 1. Handle Speech
+        Npc npc = activeNPCs.get(npcName);
+        if (npc == null) {
+            getLogger().warning("Received command for unknown NPC: " + npcName);
+            return;
+        }
+
+        // 1. Handle Speech (Chat Bubble or Server Chat)
         if (speech != null && !speech.isEmpty()) {
+            // Option A: Global Chat
             getServer().broadcastMessage("[" + npcName + "]: " + speech);
+            // Option B: Floating text above head (if supported)
+            // npc.showChatBubble(speech);
         }
 
         // 2. Handle Movement/Action
@@ -86,14 +137,16 @@ public class NPCPlugin extends HytalePlugin {
                 case "FOLLOW":
                     Player target = getServer().getPlayer(targetName);
                     if (target != null) {
-                        // Logic to make NPC follow target
-                        // NPCManager.get(npcName).getNavigator().setTarget(target);
-                        getLogger().info("NPC " + npcName + " is following " + targetName);
+                        npc.getNavigator().setTarget(target);
+                        npc.lookAt(target.getLocation());
                     }
                     break;
                 case "ATTACK":
-                     // Logic to attack
+                     // npc.setTarget(enemy);
                      break;
+                case "GOTO":
+                    // Parse target "x,y,z" and move
+                    break;
             }
         }
     }
@@ -101,4 +154,8 @@ public class NPCPlugin extends HytalePlugin {
     public static NPCPlugin getInstance() {
         return instance;
     }
+    
+    // Mock helper for registration
+    private void registerCommand(String name, CommandExecutor executor) {}
+    interface CommandExecutor { boolean onCommand(CommandSender s, Command c, String l, String[] a); }
 }
