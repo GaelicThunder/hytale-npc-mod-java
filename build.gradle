@@ -1,28 +1,37 @@
 plugins {
     id 'java'
+    id 'com.github.johnrengelman.shadow' version '7.1.2' // Per creare il fat-jar con le dipendenze
 }
 
 group 'it.gael'
-version '1.0-SNAPSHOT'
+version '1.0.0'
 
 repositories {
     mavenCentral()
-    // Placeholder for local Hytale repo or system dependency
-    flatDir {
-        dirs 'libs'
-    }
+    // Aggiungiamo repository comuni per modding
+    maven { url 'https://jitpack.io' }
 }
 
 dependencies {
-    // WebSocket Library for communication with Python Brain
+    // Dipendenze per il server WebSocket (indipendenti da Hytale)
     implementation 'org.java-websocket:Java-WebSocket:1.5.3'
     implementation 'com.google.code.gson:gson:2.10.1'
+    implementation 'org.slf4j:slf4j-simple:2.0.7' // Logger
 
-    // The Hytale Server API (Assumed to be in libs/server.jar or provided at runtime)
-    // compileOnly name: 'hytale-server' 
-    // For now, we mock the API references or assume they are available in the classpath
+    // QUA STA IL TRUCCO:
+    // Invece di mock, diciamo a Gradle che il jar del server è nella cartella 'libs'
+    // Tu devi solo copiare il file del server (es. 'hytale-server.jar') dentro la cartella 'libs' del progetto.
+    compileOnly fileTree(dir: 'libs', include: ['*.jar'])
 }
 
+// Configurazione encoding
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
+    sourceCompatibility = JavaVersion.VERSION_11 // Hytale usa Java moderno (spesso 11, 17 o 21)
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+// Configura il Jar finale per includere la libreria WebSocket dentro
+shadowJar {
+    archiveClassifier.set('')
 }
