@@ -12,17 +12,20 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.java-websocket:Java-WebSocket:1.5.3'
+    // Comunicazione ZMQ (fondamentale per il Brain)
+    implementation 'org.zeromq:jeromq:0.5.3'
+    
+    // JSON e Logging
     implementation 'com.google.code.gson:gson:2.10.1'
     implementation 'org.slf4j:slf4j-simple:2.0.7'
 
-    // Compila contro i jar presenti nella cartella libs
+    // Compila contro i jar presenti nella cartella libs (Hytale Server)
     compileOnly fileTree(dir: 'libs', include: ['*.jar'])
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 tasks.withType(JavaCompile) {
@@ -30,5 +33,7 @@ tasks.withType(JavaCompile) {
 }
 
 shadowJar {
-    archiveClassifier.set('')
+    // Il jar 'grasso' avrà il suffisso -all
+    archiveClassifier.set('all')
+    mergeServiceFiles()
 }
