@@ -1,0 +1,34 @@
+plugins {
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '8.1.1' // Aggiornato per compatibilità con Gradle 8+
+}
+
+group 'it.gael'
+version '1.0.0'
+
+repositories {
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    implementation 'org.java-websocket:Java-WebSocket:1.5.3'
+    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation 'org.slf4j:slf4j-simple:2.0.7'
+
+    // Compila contro i jar presenti nella cartella libs
+    compileOnly fileTree(dir: 'libs', include: ['*.jar'])
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17 // Aggiornato a 17 (standard attuale)
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+shadowJar {
+    archiveClassifier.set('')
+}
