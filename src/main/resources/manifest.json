@@ -4,6 +4,7 @@
   "Version": "1.0.0",
   "Description": "Brain Connector for Gillian NPC",
   "Id": "hytale-npc-mod",
+  "Group": "it.gael.npc",
   "EntryPoints": {
     "server": [
       "it.gael.npc.NPCPlugin"
