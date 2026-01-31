@@ -1,52 +1,44 @@
 package it.gael.npc;
 
-import com.google.gson.Gson;
-import it.gael.npc.network.BotServer;
-import com.hypixel.hytale.server.core.plugin.JavaPlugin;
-import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.HytaleServer;
+import com.hypixel.hytale.server.core.universe.world.World;
+import it.gael.npc.network.ZMQServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.net.InetSocketAddress;
+public class NPCPlugin {
+    private static final Logger logger = LoggerFactory.getLogger("NPC-Plugin");
+    private ZMQServer server;
+    private ActionHandler actionHandler;
 
-public class NPCPlugin extends JavaPlugin {
+    // Entry point standard per Hytale mods (spesso 'onServerStart' o costruttore)
+    // Assumiamo che Hytale usi ServiceLoader o un metodo main/init riflesso
+    public void onServerStart() {
+        logger.info("Initializing NPC Brain Connector...");
 
-    private BotServer server;
-    private final Gson gson = new Gson();
-    private static NPCPlugin instance;
-    private final ActionHandler actionHandler;
+        // Inject World Reference
+        // In una mod reale, questo avviene tramite Eventi (ServerStartedEvent)
+        // Qui lo facciamo staticamente come Proof of Concept
+        try {
+            ActionHandler.globalWorld = HytaleServer.getWorld();
+        } catch (Exception e) {
+            logger.warn("Could not inject World immediately (Server might be starting up): " + e.getMessage());
+        }
 
-    public NPCPlugin(JavaPluginInit init) {
-        super(init);
-        instance = this;
-        this.actionHandler = new ActionHandler();
-    }
-
-    public void onEnable() {
-        System.out.println("[NPCPlugin] Brain Bridge Starting on Port 8080...");
+        actionHandler = new ActionHandler();
         
-        try {
-            server = new BotServer(new InetSocketAddress(8080));
-            server.start();
-            System.out.println("[NPCPlugin] WebSocket Server Started!");
-        } catch (Exception e) {
-            System.err.println("[NPCPlugin] Error starting WebSocket: " + e.getMessage());
-            e.printStackTrace();
-        }
+        // Avviamo il server ZMQ sulla porta 5555
+        // Il Brain Python si collegherà a tcp://localhost:5555
+        server = new ZMQServer(actionHandler);
+        server.start();
+        
+        logger.info("NPC Brain Connector Ready!");
     }
 
-    public void onDisable() {
-        try {
-            if (server != null) server.stop();
-        } catch (Exception e) {
-            e.printStackTrace();
+    public void onServerStop() {
+        if (server != null) {
+            server.stop();
+            logger.info("ZMQ Server stopped.");
         }
-    }
-
-    public static NPCPlugin getInstance() {
-        return instance;
-    }
-    
-    public void executeNPCAction(String npc, String cmd, String target, String chat) {
-        // Delegate to ActionHandler
-        actionHandler.handle(npc, cmd, target, chat);
     }
 }
