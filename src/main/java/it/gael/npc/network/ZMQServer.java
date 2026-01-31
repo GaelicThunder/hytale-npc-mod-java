@@ -33,57 +33,55 @@ public class ZMQServer {
                 // Switch to REQ: The Game Server initiates requests (Events) to the Brain
                 socket = context.createSocket(SocketType.REQ);
                 
-                // Connect to Python Brain (assumed localhost)
-                logger.info("Connecting to Brain at tcp://localhost:5555...");
-                socket.connect("tcp://localhost:5555");
+                // DOCKER FIX: 
+                // Container sees localhost as itself. We need to reach the Host OS.
+                // Standard Docker bridge IP is 172.17.0.1 on Linux.
+                // If this fails, we might need an Env Var, but this is the standard fix for "Container -> Host".
+                String hostIp = System.getenv("NPC_BRAIN_HOST");
+                if (hostIp == null || hostIp.isEmpty()) {
+                    hostIp = "172.17.0.1"; // Default Docker Gateway
+                }
+                
+                String address = "tcp://" + hostIp + ":5555";
+                
+                logger.info("Connecting to Brain at " + address + "...");
+                socket.connect(address);
                 
                 // Send initial handshake
                 socket.send("SYSTEM|HELO|World Init");
-                String reply = socket.recvStr(0);
+                String reply = socket.recvStr(0); // Blocking wait for reply
                 logger.info("Brain Connected: " + reply);
 
-                // Main loop isn't polling anymore in REQ mode unless we have a queue
-                // But we need to keep the thread alive for async sending if implemented later
-                // For now, this thread just holds the socket open.
-                
                 while (running && !Thread.currentThread().isInterrupted()) {
                     Thread.sleep(1000); 
-                    // Heartbeat or keep-alive if needed
                 }
             } catch (Exception e) {
-                logger.error("ZMQ Error", e);
+                logger.error("ZMQ Error (Check if Python is running and Firewall allows 5555)", e);
             }
         });
     }
 
-    // New method to send events to Python Brain
-    // Synchronized because ZMQ sockets are not thread-safe
     public synchronized void sendEvent(String user, String message) {
         if (socket == null || !running) return;
         
         try {
-            // Protocol: "USER|MESSAGE"
             String payload = user + "|" + message;
             socket.send(payload);
             
-            // Wait for Brain Decision (Blocking)
             String response = socket.recvStr(0);
             
             if (response != null) {
-                // Protocol: "COMMAND|TARGET|CONTENT"
                 String[] parts = response.split("\\|", 3);
                 if (parts.length >= 2) {
                     String command = parts[0];
                     String target = parts[1];
                     String content = parts.length > 2 ? parts[2] : "";
                     
-                    // Execute Action
                     actionHandler.handle("Gillian", command, target, content);
                 }
             }
         } catch (Exception e) {
             logger.error("Failed to send event to brain", e);
-            // Reconnect logic could go here
         }
     }
 
