@@ -9,11 +9,6 @@ import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
 
-// We use reflection for Components to avoid missing class errors if names differ slightly
-// but we found these in the structure:
-// com.hypixel.hytale.component.Component
-// com.hypixel.hytale.server.npc.core.components.entity.ActionSetStat (Example of NPC component)
-
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.UUID;
@@ -74,13 +69,10 @@ public class ActionHandler {
             return;
         }
 
-        // Logic derived from PDF: Set "LockedTarget" in memory/blackboard
         setNPCMemory(npc, "LockedTarget", target);
-        
-        // Force state change to "Combat"
         setNPCState(npc, "Combat");
         
-        logger.info("⚔️ NPC {} set to Combat mode against {}", npc.toString(), targetName);
+        logger.info("⚔️ NPC {} set to Combat mode against {}", getEntityName(npc), targetName);
     }
 
     private void handleFollow(Entity npc, String targetName) {
@@ -92,24 +84,19 @@ public class ActionHandler {
             return;
         }
 
-        // Use "Alerted" or "Chase" state as per PDF
         setNPCMemory(npc, "LockedTarget", target);
         setNPCState(npc, "Alerted");
         
-        logger.info("🏃 NPC {} following {}", npc.toString(), targetName);
+        logger.info("🏃 NPC {} following {}", getEntityName(npc), targetName);
     }
 
     private void handleMine(Entity npc, String blockName) {
         logger.info("⛏️ [Stub] Mining logic for {}", blockName);
-        // Mining would require setting a path to a block, which involves Navigation components
     }
 
     private void handleChat(Entity npc, String message) {
         if (message == null || message.isEmpty()) return;
-        
-        // In Hytale we might want to spawn a chat bubble or send a message
-        // For now, logging it as a broadcast
-        logger.info("[Chat] {}: {}", npc.toString(), message);
+        logger.info("[Chat] {}: {}", getEntityName(npc), message);
     }
 
     private void handleIdle(Entity npc) {
@@ -122,19 +109,14 @@ public class ActionHandler {
     private Entity findEntityByName(String name) {
         if (globalWorld == null) return null;
 
-        // Note: globalWorld.getEntities() is an assumption on the method name based on standard APIs
-        // If exact method differs, reflection might be needed.
-        // Based on structure: com.hypixel.hytale.server.core.universe.world.World exists.
-        
         try {
             // Using reflection for getEntities to be safe
             Method getEntitiesMethod = globalWorld.getClass().getMethod("getEntities");
             Collection<Entity> entities = (Collection<Entity>) getEntitiesMethod.invoke(globalWorld);
             
             for (Entity e : entities) {
-                // Assuming Entity has getName() or toString() useful
-                // Structure shows com.hypixel.hytale.server.core.entity.Entity
-                if (name.equals(e.toString()) || (e instanceof Player && ((Player)e).getName().equals(name))) {
+                String eName = getEntityName(e);
+                if (name.equals(eName) || (e instanceof Player && name.equals(getEntityName(e)))) {
                     return e;
                 }
             }
@@ -144,27 +126,35 @@ public class ActionHandler {
         return null;
     }
 
+    private String getEntityName(Entity e) {
+        try {
+            // Try standard getters via reflection to avoid "cannot find symbol"
+            // Ordered by likelihood in Hytale API
+            String[] methods = {"getName", "getDisplayName", "getCustomName", "toString"};
+            
+            for (String methodName : methods) {
+                try {
+                    Method m = e.getClass().getMethod(methodName);
+                    Object result = m.invoke(e);
+                    if (result != null) return result.toString();
+                } catch (NoSuchMethodException ignored) {
+                    // Try next method
+                }
+            }
+        } catch (Exception ex) {
+            // Ignore
+        }
+        // Fallback
+        return e.toString();
+    }
+
     // --- Reflection Helpers for Components ---
-    // We use reflection here because we don't want to import Component classes that might change names
-    // or be in unexpected sub-packages (like com.hypixel.hytale.server.npc.core.components...)
 
     private void setNPCState(Entity entity, String state) {
         try {
-            // Looking for StateMachineComponent or similar
-            // From structure: com.hypixel.hytale.server.components.ai.StateMachineComponent was MISSING
-            // But we saw com.hypixel.hytale.server.npc.core.components...
-            
-            // For now, we print a log because we need the exact Component class name for State Machine
-            // from the jar structure to implement this via reflection accurately.
-            // The PDF calls it "Component_Instruction_..." inside JSON, 
-            // but in Java it's likely a "StateMachineComponent" or "AIComponent".
-            
             logger.info(">> [Simulated] Setting State to: " + state);
-            
-            // Pseudo-code for reflection:
-            // Component fsm = entity.getComponent(Class.forName("com.hypixel.hytale...StateMachineComponent"));
-            // fsm.setState(state);
-            
+            // Future: Implement Component lookup via reflection using:
+            // com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent (example path)
         } catch (Exception e) {
             logger.error("Failed to set NPC state: " + e.getMessage());
         }
@@ -173,9 +163,6 @@ public class ActionHandler {
     private void setNPCMemory(Entity entity, String key, Object value) {
         try {
             logger.info(">> [Simulated] Setting Memory '{}' to {}", key, value);
-             // Pseudo-code:
-            // Component mem = entity.getComponent(Class.forName("...MemoryComponent"));
-            // mem.set(key, value);
         } catch (Exception e) {
              logger.error("Failed to set NPC memory: " + e.getMessage());
         }
