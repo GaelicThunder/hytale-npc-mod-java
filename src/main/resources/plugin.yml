@@ -1,0 +1,6 @@
+name: hytale-npc-mod
+version: 1.0.0
+main: it.gael.npc.NPCPlugin
+description: Brain Connector for Gillian NPC
+author: GaelicThunder
+api-version: 1.0
