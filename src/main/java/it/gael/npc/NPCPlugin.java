@@ -1,43 +1,44 @@
 package it.gael.npc;
 
-import com.hypixel.hytale.server.core.universe.world.World;
-import it.gael.npc.network.ZMQServer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+// import it.gael.npc.network.BotServer;
+import com.hypixel.hytale.server.core.plugin.JavaPlugin;
+import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 
-import java.lang.reflect.Method;
+public class NPCPlugin extends JavaPlugin {
 
-public class NPCPlugin {
-    private static final Logger logger = LoggerFactory.getLogger("NPC-Plugin");
-    private ZMQServer server;
-    private ActionHandler actionHandler;
+    // private BotServer server;
+    private static NPCPlugin instance;
 
-    public void onServerStart() {
-        logger.info("Initializing NPC Brain Connector...");
-
-        // Try to inject world via Reflection on common entry points since HytaleServer class is missing/obfuscated
-        try {
-            // Attempt 1: Look for a static getWorld in com.hypixel.hytale.Main (hypothetical)
-            Class<?> mainClass = Class.forName("com.hypixel.hytale.Main");
-            Method getWorldMethod = mainClass.getMethod("getWorld");
-            ActionHandler.globalWorld = (World) getWorldMethod.invoke(null);
-            logger.info("World injected via Main.getWorld()");
-        } catch (Exception e) {
-            logger.warn("Could not inject World via reflection (ActionHandler will check for world later/null-safe): " + e.getMessage());
-        }
-
-        actionHandler = new ActionHandler();
-        
-        server = new ZMQServer(actionHandler);
-        server.start();
-        
-        logger.info("NPC Brain Connector Ready!");
+    public NPCPlugin(JavaPluginInit init) {
+        super(init);
+        instance = this;
+        System.out.println("[NPCPlugin] Costruttore chiamato con successo!");
     }
 
-    public void onServerStop() {
-        if (server != null) {
-            server.stop();
-            logger.info("ZMQ Server stopped.");
+    @Override
+    public void onEnable() {
+        System.out.println("[NPCPlugin] onEnable chiamato! HELLO WORLD!");
+        
+        /*
+        try {
+            System.out.println("[NPCPlugin] Provo a far partire il server (DISABILITATO)...");
+            // server = new BotServer(new java.net.InetSocketAddress(8080));
+            // server.start();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+        */
+    }
+
+    @Override
+    public void onDisable() {
+        System.out.println("[NPCPlugin] onDisable chiamato!");
+        /*
+        try {
+            // if (server != null) server.stop();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        */
     }
 }
