@@ -15,6 +15,8 @@ public class ZMQServer {
     private final ActionHandler actionHandler;
     private final ExecutorService executor;
     private boolean running = false;
+    private ZMQ.Socket socket;
+    private ZContext context;
 
     public ZMQServer(ActionHandler actionHandler) {
         this.actionHandler = actionHandler;
@@ -26,55 +28,68 @@ public class ZMQServer {
         running = true;
         
         executor.submit(() -> {
-            try (ZContext context = new ZContext()) {
-                // Socket to talk to clients (Python Brain)
-                ZMQ.Socket socket = context.createSocket(SocketType.REP);
-                // Bind to port 5555
-                socket.bind("tcp://*:5555");
+            try (ZContext ctx = new ZContext()) {
+                this.context = ctx;
+                // Switch to REQ: The Game Server initiates requests (Events) to the Brain
+                socket = context.createSocket(SocketType.REQ);
                 
-                logger.info("ZMQ Server listening on tcp://*:5555");
+                // Connect to Python Brain (assumed localhost)
+                logger.info("Connecting to Brain at tcp://localhost:5555...");
+                socket.connect("tcp://localhost:5555");
+                
+                // Send initial handshake
+                socket.send("SYSTEM|HELO|World Init");
+                String reply = socket.recvStr(0);
+                logger.info("Brain Connected: " + reply);
 
+                // Main loop isn't polling anymore in REQ mode unless we have a queue
+                // But we need to keep the thread alive for async sending if implemented later
+                // For now, this thread just holds the socket open.
+                
                 while (running && !Thread.currentThread().isInterrupted()) {
-                    try {
-                        // Block until a message is received
-                        // ZMQ recvStr defaults to UTF-8
-                        String message = socket.recvStr(0); 
-                        if (message != null) {
-                            logger.debug("Received raw: {}", message);
-                            
-                            // Simple protocol: "NPC_NAME|COMMAND|TARGET|CONTENT"
-                            String[] parts = message.split("\\|", 4);
-                            String response = "OK";
-
-                            if (parts.length >= 2) {
-                                String npcName = parts[0];
-                                String command = parts[1];
-                                String target = parts.length > 2 ? parts[2] : "";
-                                String content = parts.length > 3 ? parts[3] : "";
-
-                                // Execute action on main server thread if possible or handle thread-safety internally
-                                actionHandler.handle(npcName, command, target, content);
-                            } else {
-                                response = "ERROR: Invalid format";
-                            }
-
-                            // Send reply back to client
-                            socket.send(response.getBytes(ZMQ.CHARSET), 0);
-                        }
-                    } catch (Exception e) {
-                        logger.error("Error in ZMQ loop", e);
-                    }
+                    Thread.sleep(1000); 
+                    // Heartbeat or keep-alive if needed
                 }
             } catch (Exception e) {
-                logger.error("Fatal ZMQ error", e);
-            } finally {
-                logger.info("ZMQ Server stopped");
+                logger.error("ZMQ Error", e);
             }
         });
     }
 
+    // New method to send events to Python Brain
+    // Synchronized because ZMQ sockets are not thread-safe
+    public synchronized void sendEvent(String user, String message) {
+        if (socket == null || !running) return;
+        
+        try {
+            // Protocol: "USER|MESSAGE"
+            String payload = user + "|" + message;
+            socket.send(payload);
+            
+            // Wait for Brain Decision (Blocking)
+            String response = socket.recvStr(0);
+            
+            if (response != null) {
+                // Protocol: "COMMAND|TARGET|CONTENT"
+                String[] parts = response.split("\\|", 3);
+                if (parts.length >= 2) {
+                    String command = parts[0];
+                    String target = parts[1];
+                    String content = parts.length > 2 ? parts[2] : "";
+                    
+                    // Execute Action
+                    actionHandler.handle("Gillian", command, target, content);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Failed to send event to brain", e);
+            // Reconnect logic could go here
+        }
+    }
+
     public void stop() {
         running = false;
+        if (context != null) context.close();
         executor.shutdownNow();
     }
 }
