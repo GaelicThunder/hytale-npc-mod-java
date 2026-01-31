@@ -3,39 +3,40 @@ package it.gael.npc;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import it.gael.npc.network.BotServer;
-import it.gael.npc.wrapper.MockHytaleAPI; // Wrapper interno
+import org.java_websocket.WebSocket;
+
+// PACKAGE REALI DAL TUO JAR (Sanasol/Hypixel)
+import com.hypixel.hytale.server.core.plugin.JavaPlugin;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.commandsystem.basecommands.AbstractPlayerCommand;
+
+// Nota: Alcuni import specifici (come gli Eventi) potrebbero variare leggermente.
+// Per ora abilitiamo solo il comando e il WebSocket per testare la build.
 
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 
-// Import Java-WebSocket
-import org.java_websocket.WebSocket;
+public class NPCPlugin extends JavaPlugin {
 
-public class NPCPlugin {
-    
-    // NOTA PER GAËL:
-    // Questa classe non estende HytalePlugin DIRETTAMENTE per evitare errori di compilazione
-    // se le librerie non matchano.
-    // Invece usiamo un approccio "Wrapper" dove tu dovrai solo collegare i fili.
-    
     private BotServer server;
     private final Gson gson = new Gson();
     private static NPCPlugin instance;
-    
-    // Mappa semplice per tenere traccia degli NPC (Nome -> Oggetto Generico)
-    private final Map<String, Object> activeNPCs = new HashMap<>();
 
+    @Override
     public void onEnable() {
         instance = this;
-        System.out.println("Starting NPC Brain Bridge on port 8080...");
+        getLogger().info("Starting NPC Brain Bridge on port 8080...");
         
+        // 1. Avvia il Server WebSocket (Il telefono per il cervello Python)
         server = new BotServer(new InetSocketAddress(8080));
         server.start();
         
-        System.out.println("Waiting for Brain connection...");
+        // 2. Registra il comando /spawnnpc
+        this.getCommandManager().registerCommand(new SpawnCommand(this));
     }
 
+    @Override
     public void onDisable() {
         try {
             if (server != null) server.stop();
@@ -44,57 +45,33 @@ public class NPCPlugin {
         }
     }
 
-    // ==========================================
-    // ESEMPIO DI GESTIONE CHAT (Da collegare al vero evento)
-    // ==========================================
-    public void handleChatEvent(String playerName, String message, Object playerEntity) {
-        // Questa funzione deve essere chiamata dal TUO evento del server
-        
-        if (activeNPCs.isEmpty()) return;
-
-        JsonObject json = new JsonObject();
-        json.addProperty("type", "chat");
-        json.addProperty("sender", playerName);
-        json.addProperty("message", message);
-        
-        // Context Mock - Sostituisci con dati veri
-        JsonObject context = new JsonObject();
-        context.addProperty("health", 100); 
-        context.addProperty("pos", "0,0,0"); // playerEntity.getLocation().toString()
-        context.addProperty("time", "Day");
-        
-        json.add("context", context);
-        server.broadcast(gson.toJson(json));
-    }
-
-    // ==========================================
-    // ESECUZIONE AZIONI (Dalla AI)
-    // ==========================================
-    public void executeNPCAction(String npcName, String command, String targetName, String speech) {
-        Object npc = activeNPCs.get(npcName);
-        
-        if (speech != null && !speech.isEmpty()) {
-            // Esempio: Server.broadcastMessage("[" + npcName + "]: " + speech);
-            System.out.println("NPC SAYS: " + speech);
-        }
-
-        if (command != null) {
-            switch (command) {
-                case "FOLLOW":
-                    // Esempio: ((Npc) npc).getNavigator().setTarget(targetName);
-                    System.out.println("NPC MOVING TO FOLLOW: " + targetName);
-                    break;
-                case "ATTACK":
-                    System.out.println("NPC ATTACKING: " + targetName);
-                    break;
-                case "MINE":
-                     System.out.println("NPC MINING: " + targetName);
-                    break;
-            }
-        }
-    }
-    
     public static NPCPlugin getInstance() {
         return instance;
+    }
+    
+    // ==========================================
+    // Classe Comando Interna
+    // ==========================================
+    public static class SpawnCommand extends AbstractPlayerCommand {
+        private final NPCPlugin plugin;
+
+        public SpawnCommand(NPCPlugin plugin) {
+            // Nome, Descrizione, Permesso, Alias
+            super("spawnnpc", "Spawna un NPC AI", null, "npc");
+            this.plugin = plugin;
+        }
+
+        @Override
+        public void execute(Player player, String[] args) {
+            if (args.length < 1) {
+                player.sendMessage("Usa: /spawnnpc <nome>");
+                return;
+            }
+            String name = args[0];
+            player.sendMessage("Sto evocando " + name + " (Logica WIP)...");
+            
+            // Qui andrà il codice di spawn reale appena confermiamo che compila
+            plugin.getLogger().info("Player " + player.getName() + " spawned " + name);
+        }
     }
 }
