@@ -1,12 +1,10 @@
 {
-  "schemaVersion": 1,
-  "name": "hytale-npc-mod",
-  "id": "hytale-npc-mod",
-  "version": "1.0.0",
-  "description": "Brain Connector for Gillian NPC",
-  "url": "https://github.com/GaelicThunder/hytale-npc-mod-java",
-  "main": "it.gael.npc.NPCPlugin",
-  "entrypoints": {
+  "SchemaVersion": 1,
+  "Name": "hytale-npc-mod",
+  "Version": "1.0.0",
+  "Description": "Brain Connector for Gillian NPC",
+  "Id": "hytale-npc-mod",
+  "EntryPoints": {
     "server": [
       "it.gael.npc.NPCPlugin"
     ]
