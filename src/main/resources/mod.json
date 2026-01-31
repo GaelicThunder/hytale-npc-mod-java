@@ -1,0 +1,6 @@
+{
+  "id": "hytale-npc-mod",
+  "name": "Hytale NPC Brain",
+  "version": "1.0.0",
+  "main": "it.gael.npc.NPCPlugin"
+}
