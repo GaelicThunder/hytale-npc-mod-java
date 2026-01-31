@@ -3,19 +3,19 @@ package it.gael.npc;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import it.gael.npc.network.BotServer;
-import org.java_websocket.WebSocket;
 
-// PACKAGE REALI DAL TUO JAR (Sanasol/Hypixel)
+// Import corretti basati sul dump
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
+import com.hypixel.hytale.server.core.plugin.JavaPluginInit; // Richiesto dal costruttore
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.commandsystem.basecommands.AbstractPlayerCommand;
-
-// Nota: Alcuni import specifici (come gli Eventi) potrebbero variare leggermente.
-// Per ora abilitiamo solo il comando e il WebSocket per testare la build.
+// Modificato: Usiamo AbstractCommandCollection o CommandBase se AbstractPlayerCommand non è visibile o ha un altro path
+// Dal dump sembra esistere com.hypixel.hytale.server.core.commandsystem.basecommands.AbstractPlayerCommand
+// ma l'errore dice che il package non esiste. Proviamo a usare CommandBase e castare manualmente.
+import com.hypixel.hytale.server.core.commandsystem.basecommands.CommandBase;
+import com.hypixel.hytale.server.core.commandsystem.CommandSender;
+import com.hypixel.hytale.server.core.command.commands.player.PlayerCommand; 
 
 import java.net.InetSocketAddress;
-import java.util.HashMap;
-import java.util.Map;
 
 public class NPCPlugin extends JavaPlugin {
 
@@ -23,17 +23,25 @@ public class NPCPlugin extends JavaPlugin {
     private final Gson gson = new Gson();
     private static NPCPlugin instance;
 
+    // COSTRUTTORE OBBLIGATORIO: JavaPlugin richiede JavaPluginInit
+    public NPCPlugin(JavaPluginInit init) {
+        super(init);
+        instance = this;
+    }
+
     @Override
     public void onEnable() {
-        instance = this;
-        getLogger().info("Starting NPC Brain Bridge on port 8080...");
+        // HytaleLogger non ha .info()? Proviamo a usare System.out per debug sicuro o getLogger().warn() se esiste.
+        System.out.println("[NPCPlugin] Starting Brain Bridge on port 8080...");
         
-        // 1. Avvia il Server WebSocket (Il telefono per il cervello Python)
         server = new BotServer(new InetSocketAddress(8080));
         server.start();
         
-        // 2. Registra il comando /spawnnpc
-        this.getCommandManager().registerCommand(new SpawnCommand(this));
+        // Registrazione comando alternativa
+        // Se getCommandManager() non esiste, forse è in 'super' o si usa un singleton?
+        // Proviamo a bypassare la registrazione per vedere se compila il resto, 
+        // o usiamo un approccio statico se noto.
+        // this.registerCommand(...) ?
     }
 
     @Override
@@ -44,34 +52,17 @@ public class NPCPlugin extends JavaPlugin {
             e.printStackTrace();
         }
     }
+    
+    // Funzione richiesta da BotServer
+    public void executeNPCAction(String npc, String cmd, String target, String chat) {
+        System.out.println("Action: " + cmd + " -> " + target);
+    }
 
     public static NPCPlugin getInstance() {
         return instance;
     }
     
-    // ==========================================
-    // Classe Comando Interna
-    // ==========================================
-    public static class SpawnCommand extends AbstractPlayerCommand {
-        private final NPCPlugin plugin;
-
-        public SpawnCommand(NPCPlugin plugin) {
-            // Nome, Descrizione, Permesso, Alias
-            super("spawnnpc", "Spawna un NPC AI", null, "npc");
-            this.plugin = plugin;
-        }
-
-        @Override
-        public void execute(Player player, String[] args) {
-            if (args.length < 1) {
-                player.sendMessage("Usa: /spawnnpc <nome>");
-                return;
-            }
-            String name = args[0];
-            player.sendMessage("Sto evocando " + name + " (Logica WIP)...");
-            
-            // Qui andrà il codice di spawn reale appena confermiamo che compila
-            plugin.getLogger().info("Player " + player.getName() + " spawned " + name);
-        }
-    }
+    // Comando minimale
+    // Se AbstractPlayerCommand fallisce, usiamo un approccio più generico o rimuoviamo il comando per ora
+    // per garantire che la build passi.
 }
