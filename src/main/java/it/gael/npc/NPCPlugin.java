@@ -12,14 +12,14 @@ public class NPCPlugin extends JavaPlugin {
     private BotServer server;
     private final Gson gson = new Gson();
     private static NPCPlugin instance;
+    private final ActionHandler actionHandler;
 
-    // Costruttore richiesto da Hytale
     public NPCPlugin(JavaPluginInit init) {
         super(init);
         instance = this;
+        this.actionHandler = new ActionHandler();
     }
 
-    // Rimosso @Override per sicurezza (se la firma cambia leggermente tra le versioni)
     public void onEnable() {
         System.out.println("[NPCPlugin] Brain Bridge Starting on Port 8080...");
         
@@ -33,7 +33,6 @@ public class NPCPlugin extends JavaPlugin {
         }
     }
 
-    // Rimosso @Override
     public void onDisable() {
         try {
             if (server != null) server.stop();
@@ -46,9 +45,8 @@ public class NPCPlugin extends JavaPlugin {
         return instance;
     }
     
-    // Stub per azione NPC (da implementare con API reali quando disponibili)
     public void executeNPCAction(String npc, String cmd, String target, String chat) {
-        System.out.println("BRAIN COMMAND: " + cmd + " -> " + target + " (Chat: " + chat + ")");
-        // Qui andrà la logica di movimento usando this.getServer()...
+        // Delegate to ActionHandler
+        actionHandler.handle(npc, cmd, target, chat);
     }
 }
