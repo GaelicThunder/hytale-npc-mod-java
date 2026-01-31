@@ -1,8 +1,6 @@
 {
-  "name": "NPCBrainBridge",
-  "id": "npc_brain_bridge",
+  "name": "hytale-npc-mod",
   "version": "1.0.0",
   "main": "it.gael.npc.NPCPlugin",
-  "description": "Bridge between Hytale Server and Python AI Brain via WebSockets",
-  "author": "Gaël"
+  "description": "Brain Connector for Gillian NPC"
 }
