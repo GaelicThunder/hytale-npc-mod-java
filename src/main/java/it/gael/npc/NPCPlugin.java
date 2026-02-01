@@ -1,44 +1,28 @@
 package it.gael.npc;
 
-// import it.gael.npc.network.BotServer;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 
 public class NPCPlugin extends JavaPlugin {
 
-    // private BotServer server;
-    private static NPCPlugin instance;
-
     public NPCPlugin(JavaPluginInit init) {
         super(init);
-        instance = this;
-        System.out.println("[NPCPlugin] Costruttore chiamato con successo!");
+        System.out.println("[NPCPlugin] Costruttore chiamato - Plugin istanziato");
     }
 
-    // @Override rimosso perché la classe base potrebbe non avere questo metodo
-    public void onEnable() {
-        System.out.println("[NPCPlugin] onEnable chiamato! HELLO WORLD!");
+    @Override
+    public void setup() {
+        System.out.println("[NPCPlugin] setup() ESEGUITO! Il plugin è attivo e funzionante.");
         
+        // Qui possiamo far partire il server ZMQ/WebSocket in un thread separato
         /*
-        try {
-            System.out.println("[NPCPlugin] Provo a far partire il server (DISABILITATO)...");
-            // server = new BotServer(new java.net.InetSocketAddress(8080));
-            // server.start();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        */
-    }
-
-    // @Override rimosso
-    public void onDisable() {
-        System.out.println("[NPCPlugin] onDisable chiamato!");
-        /*
-        try {
-            // if (server != null) server.stop();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        new Thread(() -> {
+            try {
+                // start server...
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
         */
     }
 }
