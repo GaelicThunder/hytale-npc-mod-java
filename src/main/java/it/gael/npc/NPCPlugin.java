@@ -15,7 +15,7 @@ public class NPCPlugin extends JavaPlugin {
         System.out.println("[NPCPlugin] Costruttore chiamato con successo!");
     }
 
-    @Override
+    // @Override rimosso perché la classe base potrebbe non avere questo metodo
     public void onEnable() {
         System.out.println("[NPCPlugin] onEnable chiamato! HELLO WORLD!");
         
@@ -30,7 +30,7 @@ public class NPCPlugin extends JavaPlugin {
         */
     }
 
-    @Override
+    // @Override rimosso
     public void onDisable() {
         System.out.println("[NPCPlugin] onDisable chiamato!");
         /*
